@@ -1,18 +1,18 @@
 package controller
 
 import (
-	"fmt"
 	"my-first-crud-go/src/configuration/logs"
 	"my-first-crud-go/src/configuration/validation"
 	"my-first-crud-go/src/controller/model/request"
-	"my-first-crud-go/src/controller/model/response"
+	model "my-first-crud-go/src/model/user"
+	"my-first-crud-go/src/view"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-func CreateUser(c *gin.Context) {
+func (uc *userController) CreateUser(c *gin.Context) {
 	var userRequest request.UserRequest
 
 	if err := c.ShouldBindJSON(&userRequest); err != nil {
@@ -22,15 +22,18 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(userRequest)
-	response := response.UserResponse{
-		Id:       "1",
-		Username: userRequest.Username,
-		Email:    userRequest.Email,
-		Age:      userRequest.Age,
+	domain := model.NewUserDomain(userRequest.Username, userRequest.Email, userRequest.Password, userRequest.Age)
+
+	if err := uc.service.CreateUser(domain); err != nil {
+
+		logs.Error("Fail to create a user", err, zap.String("Journey", "CreateUser"))
+
+		c.JSON(err.Code, err)
+		return
 	}
 
 	logs.Info("User created successfully", zap.String("Journey", "CreateUser"))
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, view.ConvertUserToResponse(domain))
+
 }
